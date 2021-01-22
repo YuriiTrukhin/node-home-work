@@ -33,14 +33,8 @@ async function addContact(name, email, phone) {
     phone: phone,
   };
   const contactsData = await listContacts();
-  const filter = contactsData.filter((contact) => contact.id === newContact.id);
-  if (filter.length === 0) {
-    contactsData.push(newContact);
+  contactsData.push(newContact);
     fs.writeFile(contactsPath, JSON.stringify(contactsData));
     return contactsData;
-  } else {
-    console.log("такой айди уже существует");
-    return;
-  }
 }
 module.exports = { listContacts, getContactById, removeContact, addContact };
