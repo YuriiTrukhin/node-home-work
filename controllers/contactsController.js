@@ -1,4 +1,3 @@
-const { v4: uuidv4 } = require("uuid");
 const contacts = require("../db/contacts.json");
 const fs = require("fs").promises;
 const path = require("path");
@@ -53,7 +52,6 @@ class ContactsController {
   if(req.body.name||req.body.email||req.body.phone){
     contacts[contactIndex] = updatedContact;
     fs.writeFile(contactsPath, JSON.stringify(contacts));
-    console.log(updatedContact);
     return res.status(200).send(contacts[contactIndex]);
   }
   return res.status(400).send({ message: `missing required name field` })
