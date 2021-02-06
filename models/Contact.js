@@ -16,20 +16,10 @@ const ContactSchema = new Schema({
     phone: {
         type: String,
         required: true,
-    },
-    subscription:{
-        type: String,
-        required: true,
-    },
-    password:{
-        type: String,
-        required: true,
-    },
-    token:{
-        type: String,
-        required: false,
     }
-});
+},
+{versionKey:false,timestamps:true})
+;
 
 // создастся как contacts
 const Contact = mongoose.model('Contact', ContactSchema);
