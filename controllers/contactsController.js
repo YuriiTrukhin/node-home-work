@@ -1,60 +1,95 @@
-const contacts = require("../db/contacts.json");
-const fs = require("fs").promises;
-const path = require("path");
-const contactsPath = path.join("./db/contacts.json");
+const Joi = require("joi");
+const {
+  Types: { ObjectId },
+} = require("mongoose");
+
+const Contact = require("../models/Contact.js");
 
 class ContactsController {
-  notfound=(id,res)=>{
-    const foundContact = contacts.find((contact) => contact.id === id);
-    if (!foundContact) {
-      return res.status(404).send({ message: "Not found" });
+  validateUser(req, res, next) {
+    const validationRules = Joi.object({
+      name: Joi.string().alphanum().min(3).max(30).required(),
+      email: Joi.string()
+        .email({ minDomainSegments: 2, tlds: { allow: ["com", "net"] } })
+        .required(),
+      phone: Joi.string()
+        .length(10)
+        .pattern(/^[0-9]+$/)
+        .required(),
+    });
+    const result = validationRules.validate(req.body);
+    if (result.error) {
+      return res.status(400).send(result.error);
     }
+
+    next();
   }
-  listContacts(req, res) {
+  validateUserUpdate(req, res, next) {
+    const validationRules = Joi.object({
+      name: Joi.string().alphanum().min(3).max(30),
+      email: Joi.string().email({ minDomainSegments: 2, tlds: { allow: ["com", "net"] } }),
+      phone: Joi.string()
+        .length(10)
+        .pattern(/^[0-9]+$/),
+    }).min(1);
+    const result = validationRules.validate(req.body);
+    if (result.error) {
+      return res.status(400).send(result.error);
+    }
+
+    next();
+  }
+  validateId(req, res, next) {
+    const {
+      params: { contactId },
+    } = req;
+    if (!ObjectId.isValid(contactId)) {
+      return res.status(400).send("Your id is not valid");
+    }
+    next();
+  }
+  async listContacts(req, res) {
+    const contacts = await Contact.find();
     res.json(contacts);
   }
-  getContactById=(req, res)=> {
+  async getContactById(req, res) {
     const { contactId } = req.params;
-    const id = Number(contactId);
-    this.notfound(id,res)
-    const foundContact = contacts.find((contact) => contact.id === id);
-    res.status(200).send(foundContact)
-  }
-  newContact(req, res) {
-    const newContact = {
-      id: contacts.length + 1,
-      ...req.body,
-    };
-    if(!req.body.name||!req.body.email||!req.body.phone){
-      return res.status(400).send({ message: `missing required name field` })
+    const contact = await Contact.findById(contactId);
+    if (!contact) {
+      return res.status(400).send("User isn't found");
     }
-    contacts.push(newContact);
-    fs.writeFile(contactsPath, JSON.stringify(contacts));
-    res.status(201).send(newContact);
+    res.json(contact);
   }
-  contactDelete=(req, res) =>{
-    const { contactId } = req.params;
-    const id = Number(contactId);
-    this.notfound(id,res)
-    const newContacts = contacts.filter((contact) => contact.id !== id);
-    fs.writeFile(contactsPath, JSON.stringify(newContacts));
-    res.status(200).send({ message: "contact deleted" });
+  async newContact(req, res) {
+    try {
+      const { body } = req;
+      const newContact = await Contact.create(body);
+      res.json(newContact);
+    } catch (error) {
+      res.status(400).send(error.message);
+    }
   }
-  updateContact=(req, res)=> {
-    const { contactId } = req.params;
-    const id = Number(contactId);
-    this.notfound(id,res)
-    const contactIndex = contacts.findIndex((contact) => contact.id === id);
-  const updatedContact = {
-    ...contacts[contactIndex],
-    ...req.body,
-  };
-  if(req.body.name||req.body.email||req.body.phone){
-    contacts[contactIndex] = updatedContact;
-    fs.writeFile(contactsPath, JSON.stringify(contacts));
-    return res.status(200).send(contacts[contactIndex]);
+  async contactDelete(req, res) {
+    const {
+      params: { contactId },
+    } = req;
+    const deletedContact = await Contact.findByIdAndDelete(contactId);
+    if (!deletedContact) {
+      return res.status(400).send("User isn't found");
+    }
+    res.json(deletedContact);
   }
-  return res.status(400).send({ message: `missing required name field` })
+  async updateContact(req, res) {
+    const {
+      params: { contactId },
+    } = req;
+    const updatedContact = await Contact.findByIdAndUpdate(contactId, req.body, {
+      new: true,
+    });
+    if (!updatedContact) {
+      return res.status(400).send("User isn't found");
+    }
+    res.json(updatedContact);
   }
 }
 module.exports = new ContactsController();
