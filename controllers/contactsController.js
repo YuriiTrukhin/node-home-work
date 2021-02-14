@@ -24,6 +24,22 @@ class ContactsController {
 
     next();
   }
+  async pagination(req,res){
+    const {
+      params: { page, limit },
+    } = req;
+
+    const contacts = await Contact.paginate({}, { limit: limit, page: page });
+    res.json(contacts);
+  }
+  async subFilter(req,res){
+    const {
+      params: {sub},
+    } = req;
+
+    const filter = await Contact.paginate({ subscription: sub },{ limit: 100, page: 1});
+    res.json(filter);
+  }
   validateUserUpdate(req, res, next) {
     const validationRules = Joi.object({
       name: Joi.string().alphanum().min(3).max(30),

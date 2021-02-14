@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const routerContacts = require("./router/contactsRouter");
+const routerUser = require("./router/userRouter")
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 
@@ -26,6 +27,7 @@ class Server {
   }
   initRoutes() {
     this.server.use("/api/contacts", routerContacts);
+    this.server.use("/auth", routerUser);
   }
   async connectToDb () {
     try {
