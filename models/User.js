@@ -21,7 +21,8 @@ const UserSchema = new Schema(
       enum: ["free", "pro", "premium"],
       default: "free"
     },
-    token: String
+    token: String,
+    verificationToken:String,
   },
   { versionKey: false, timestamps: true }
 );

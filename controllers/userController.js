@@ -9,16 +9,19 @@ const imagemin = require("imagemin");
 const fs = require("fs").promises;
 const { existsSync } = require("fs");
 const path = require("path");
+const sgMail = require("@sendgrid/mail");
+const { v4: uuidv4 } = require("uuid");
 
 dotenv.config();
 mongoose.set("useFindAndModify", false);
+sgMail.setApiKey(process.env.SEND_GRID_TOKEN);
 
 class UserController {
   validateUser(req, res, next) {
     const validationRules = Joi.object({
       email: Joi.string()
-        .email({ minDomainSegments: 2, tlds: { allow: ["com", "net"] } })
-        .required(),
+      .email({ minDomainSegments: 2, tlds: { allow: ["com", "net"] } })
+      .required(),
       password: Joi.string().required(),
     });
     const result = validationRules.validate(req.body);
@@ -28,9 +31,23 @@ class UserController {
     next();
   }
   async newUser(req, res) {
+    const verificationTok = uuidv4();
     const avatarName = `${Date.now()}.png`;
     try {
       const { body } = req;
+      try {
+        console.log("email", body.email);
+        console.log("token", verificationTok);
+        const msg = {
+          to: body.email, // Change to your recipient
+          from: "TPYXIH@gmail.com", // Change to your verified sender
+          subject: "Please verify your account",
+          html: `Welcome to our application! To verify your account please go by <a href="http://localhost:3000/auth/verify/${verificationToken}">link</a>`,
+        };
+        await sgMail.send(msg);
+      } catch (error) {
+        console.log(error.message);
+      }
       const avatar = Avatar.catBuilder(128);
       avatar.create(body.email).then((buffer) => fs.writeFile(`tmp/avatar.png`, buffer));
       await imagemin(["tmp/"], {
@@ -42,6 +59,7 @@ class UserController {
         ...body,
         password: hashedPassword,
         avatarURL: `http://localhost:3000/images/${avatarName}`,
+        verificationToken: verificationTok,
       });
       const { email, subscription } = newUser;
       res.status(201).json({
@@ -51,6 +69,7 @@ class UserController {
         },
       });
     } catch (error) {
+      console.log(error.message);
       res.status(409).send("Email in use");
     }
   }
@@ -152,6 +171,23 @@ class UserController {
     }
     await User.findByIdAndUpdate(req.user._id, req.body, { new: true });
     return res.status(200).send("Data updated");
+  }
+  async authEmail(req, res) {
+    const {
+      params: { verificationToken },
+    } = req;
+
+    console.log(verificationToken
+      );
+    const user = await User.findOne({
+      verificationToken,
+    });
+    if (!user) {
+      return res.status(404).send("User not found");
+    }
+    const conectUser = await User.findByIdAndUpdate(user._id, { verificationToken: "" });
+    console.log(conectUser);
+    return res.status(200).send("successfull");
   }
 }
 module.exports = new UserController();

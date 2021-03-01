@@ -7,7 +7,6 @@ const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 
 dotenv.config();
-
 const PORT = process.env.port || 3000;
 
 class Server {
